@@ -1,0 +1,63 @@
+{
+    "name": "laragear/fingerprint",
+    "description": "Ridiculously fast non-cryptographic hashes in your application or Eloquent Models",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "authors": [
+        {
+            "name": "Italo Baeza C.",
+            "email": "DarkGhostHunter@Gmail.com",
+            "homepage": "https://github.com/DarkGhostHunter"
+        }
+    ],
+    "support": {
+        "source": "https://github.com/Laragear/Fingerprint",
+        "issues": "https://github.com/Laragear/Fingerprint/issues"
+    },
+    "require": {
+        "php": "^8.2",
+    },
+    "require-dev": {
+        "laragear/meta-testing": "3.*",
+        "orchestra/testbench": "9.*|8.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Laragear\\Fingerprint\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit --coverage-clover build/logs/clover.xml",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Laragear\\Fingerprint\\FingerprintServiceProvider"
+            ]
+        }
+    },
+    "suggest": {
+        "illuminate/database": "To use the [AsFingerprint] cast (^11.0|^12.0)."
+    },
+    "funding": [
+        {
+            "type": "Github Sponsorship",
+            "url": "https://github.com/sponsors/DarkGhostHunter"
+        },
+        {
+            "type": "Paypal",
+            "url": "https://paypal.me/darkghosthunter"
+        }
+    ]
+}
