@@ -37,7 +37,7 @@ composer require laragear/fingerprint
 
 ## How does this work?
 
-This basically creates non-cryptographic fingerprint hashes of strings, `Stringable` instance, resources, or any object in a memory-efficient way. It leverages the power of [`hash_init()`](https://www.php.net/manual/function.hash-init.php) and `json_encode` to hash anything, including Eloquent Models or Collections, and uses the fastest hash algorithm around, [`xxHash`](https://xxhash.com/).
+This utility creates non-cryptographic fingerprint hashes of strings, `Stringable` instance, resources, or any object in a memory-efficient way. It leverages the power of [`hash_init()`](https://www.php.net/manual/function.hash-init.php) and `json_encode` to hash anything, including Eloquent Models or Collections, and uses the fastest hash algorithm around, [`xxHash`](https://xxhash.com/).
 
 ## Usage
 
