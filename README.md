@@ -37,7 +37,7 @@ composer require laragear/fingerprint
 
 ## How does this work?
 
-This basically creates non-cryptographic fingerprint hashes of strings, `Stringable` instance, resources, or any object in a memory-efficient way. It leverages the power of [`hash_init()`](https://www.php.net/manual/function.hash-init.php) and `json_encode` to hash anything, including Eloquent Models or Collections.
+This basically creates non-cryptographic fingerprint hashes of strings, `Stringable` instance, resources, or any object in a memory-efficient way. It leverages the power of [`hash_init()`](https://www.php.net/manual/function.hash-init.php) and `json_encode` to hash anything, including Eloquent Models or Collections, and uses the fastest hash algorithm around, [`xxHash`](https://xxhash.com/).
 
 ## Usage
 
@@ -49,15 +49,15 @@ use Laragear\Fingerprint\Fingerprint;
 $fingerprint = Fingerprint::of('string')
 ```
 
-You may use anything that can be encoded into JSON like Eloquent Models, or is _traversable_ objects, like resource streams or Collections.
+The Fingerprint instance is not limited to strings. You can shove in anything that can be encoded into JSON, like Eloquent Models, or _traversable_ objects, like resource streams or Lazy Collections.
 
 ```php
 use App\Models\Article;
 use Laragear\Fingerprint\Fingerprint;
 
-$articles = Article::take(10)->latest()->get(['id', 'body']);
-
-$fingerprint = Fingerprint::of($articles);
+$fingerprint = Fingerprint::of(
+    Article::latest()->select(['id', 'body'])->lazy(50)
+);
 ```
 
 Once done, you may retrieve the fingerprint hash encoded in Base64 using `hash()`, or just casting the Fingerprint as a string wherever you require.
@@ -74,7 +74,7 @@ return "This is the article fingerprint: [$fingerprint]."
 
 The Fingerprint hash is generated on demand and cached inside the Fingerprint instance. If the value is an object and it changes, the hash will remain the same.
 
-To avoid this, you may use a callback that returns the value to hash. Everytime the hash is required, it will be regenerated even if the value remains the same.
+To avoid this, you may use a callback that returns the value to hash. Everytime the hash is required, it will be generated anew.
 
 ```php
 use App\Models\Article;
@@ -84,6 +84,10 @@ $article = Article::find(1);
 
 $fingerprint = Fingerprint::of(fn () => $article->body);
 ```
+
+> [!NOTE]
+> 
+> Because the hash is generated every time is required, you may want to save the hash into a variable to avoid hashing large values, and retrieving a new hash only when needed.
 
 ### Formats
 
@@ -96,14 +100,18 @@ By default, the Fingerprint hash returned is encoded in Base64 for portability. 
 | `base64UrlSafe()`    | Returns the hash encoded in Base64 and URL-Safe characters | `dGV-z_dA`    |
 | `hex()`              | Returns the hash encoded in hexadecimal                    | `38d1ffa8...` |
 
-
-You may change the default format using the `Laragear\Fingerprint\Fingerprint::$as` with the Format enum of choice. You may do this while your application boots.
+You may change the default format using the `Laragear\Fingerprint\Fingerprint::$as` with the Format enum of choice. You may do this while your application boots in your `App\Providers\AppServiceProvider` or `bootstrap\app.php`. 
 
 ```php
+use Illuminate\Foundation\Application;
 use Laragear\Fingerprint\Enums\Format;
 use Laragear\Fingerprint\Fingerprint;
 
-Fingerprint::$as = Format::AsHex;
+return Application::configure(basePath: dirname(__DIR__))
+    ->booted(function () {
+        Fingerprint::$as = Format::AsHex;
+    })
+    ->create();
 ```
 
 This may also be changed on a per-instance basis using as `as()`.
@@ -146,20 +154,37 @@ Fingerprint::$use = 'xxh128';
 You can use the `Laragear\Fingerprint\Casts\AsFingerprint` cast in any of your model attributes to create a Fingerprint instance based on one or more attributes from the model, and save the resulting hash into the database.
 
 ```php
+use Illuminate\Database\Eloquent\Model;
 use Laragear\Fingerprint\Casts\AsFingerprint;
 
-public function casts()
+/**
+ * @property \Laragear\Fingerprint\Fingerprint $fingerprint 
+ */
+class Article extends Model
 {
-    return [
-        'fingerprint' => AsFingerprint::of('body')
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    public function casts()
+    {
+        return [
+            'fingerprint' => AsFingerprint::of('body'),
+        ];
+    }    
 }
 ```
 
-The cast also supports using a custom algorithm and format through the second and third argument.
+> [!NOTE]
+> 
+> The `AsFingerprint` cast doesn't support hash options. If you require custom options, consider using an [Eloquent accessor/mutator](https://laravel.com/docs/12.x/eloquent-mutators#accessors-and-mutators) instead.
+
+The cast also supports using a custom algorithm and format through the second and third argument. The Cast configuration will override the default algorithm and format, and these will be respected when retrieving or saving the Fingerprint instance.
 
 ```php
-use Laragear\Fingerprint\Casts\AsFingerprint;use Laragear\Fingerprint\Enums\Format;
+use Laragear\Fingerprint\Casts\AsFingerprint;
+use Laragear\Fingerprint\Enums\Format;
 
 AsFingerprint::of(['title', 'body'], 'sha256', Format::AsBase64UrlSafe)
 ```

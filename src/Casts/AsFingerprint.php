@@ -74,7 +74,7 @@ class AsFingerprint implements CastsAttributes
         }
 
         if ($value instanceof Fingerprint) {
-            return $value->as($this->format)->toString();
+            return $value->use($this->algorithm)->as($this->format)->toString();
         }
 
         throw new InvalidArgumentException(

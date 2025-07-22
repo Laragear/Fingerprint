@@ -25,6 +25,17 @@ class FingerprintTest extends TestCase
         static::assertSame(Format::AsBase64, Fingerprint::$as);
     }
 
+    public function test_use_changes_algorithm(): void
+    {
+        Fingerprint::$use = 'crc32c';
+
+        $fingerprint = Fingerprint::of('test');
+
+        $fingerprint->use('sha256');
+
+        static::assertSame('TZZ6MBEb8p8OugHESLN1wWKbL+0BzfzDrtkfG1fV3V4=', (string) $fingerprint);
+    }
+
     public function test_as_changes_format(): void
     {
         Fingerprint::$as = Format::AsRaw;

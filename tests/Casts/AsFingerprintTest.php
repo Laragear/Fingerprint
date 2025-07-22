@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User;
 use Laragear\Fingerprint\Casts\AsFingerprint;
 use Laragear\Fingerprint\Enums\Format;
 use Laragear\Fingerprint\Fingerprint;
+use Mockery;
 use Orchestra\Testbench\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ValueError;
@@ -130,5 +131,20 @@ class AsFingerprintTest extends TestCase
         $hash = $cast->set($model, 'hash', $fingerprint, $model->getAttributes());
 
         static::assertSame('0b8cebfeed0d459f', $hash);
+    }
+
+    public function test_uses_algorithm_of_cast(): void
+    {
+        $cast = new AsFingerprint(['test-algo', Format::AsHex->value, 'foo']);
+        $model = new User();
+
+        $fingerprint = Mockery::mock(Fingerprint::class);
+        $fingerprint->expects('as')->with(Format::AsHex)->andReturnSelf();
+        $fingerprint->expects('use')->with('test-algo')->andReturnSelf();
+        $fingerprint->expects('toString')->andReturn('it-worked');
+
+        $hash = $cast->set($model, 'hash', $fingerprint, $model->getAttributes());
+
+        static::assertSame('it-worked', $hash);
     }
 }

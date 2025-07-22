@@ -53,6 +53,18 @@ class Fingerprint implements Stringable
     }
 
     /**
+     * Sets the algorithm to create the Fingerprint hash.
+     *
+     * @return $this
+     */
+    public function use(string $algorithm): static
+    {
+        $this->algorithm = $algorithm;
+
+        return $this;
+    }
+
+    /**
      * Sets the formatting type when casting this Fingerprint instance into a string.
      */
     public function as(Enums\Format $as): static
