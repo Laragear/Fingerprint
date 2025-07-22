@@ -1,7 +1,7 @@
 # Fingerprint
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/laragear/fingerprint.svg)](https://packagist.org/packages/laragear/fingerprint)
 [![Latest stable test run](https://github.com/Laragear/Fingerprint/actions/workflows/php.yml/badge.svg)](https://github.com/Laragear/Fingerprint/actions/workflows/php.yml)
-[![Codecov coverage](https://codecov.io/gh/Laragear/Fingerprint/branch/graph/badge.svg?token=lOyu8F4EHc)](https://codecov.io/gh/Laragear/Fingerprint)
+[![Codecov coverage](https://codecov.io/gh/Laragear/Fingerprint/graph/badge.svg?token=lOyu8F4EHc)](https://codecov.io/gh/Laragear/Fingerprint)
 [![Maintainability](https://qlty.sh/gh/Laragear/projects/Fingerprint/maintainability.svg)](https://qlty.sh/gh/Laragear/projects/Fingerprint)
 [![Sonarcloud Status](https://sonarcloud.io/api/project_badges/measure?project=Laragear_Fingerprint&metric=alert_status)](https://sonarcloud.io/dashboard?id=Laragear_Fingerprint)
 [![Laravel Octane Compatibility](https://img.shields.io/badge/Laravel%20Octane-Compatible-success?style=flat&logo=laravel)](https://laravel.com/docs/12.x/octane#introduction)
