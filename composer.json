@@ -17,7 +17,7 @@
         "issues": "https://github.com/Laragear/Fingerprint/issues"
     },
     "require": {
-        "php": "^8.2",
+        "php": "^8.2"
     },
     "require-dev": {
         "laragear/meta-testing": "3.*",
