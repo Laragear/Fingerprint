@@ -197,6 +197,6 @@ class Fingerprint implements Stringable
      */
     public static function of(mixed $value, ?string $algorithm = null, array $options = []): static
     {
-        return new static($value, $algorithm ?? static::$use, $options, static::$as);
+        return new static($value, $algorithm ?? static::$use, $options, static::$as); // @phpstan-ignore-line
     }
 }
