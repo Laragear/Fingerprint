@@ -4,7 +4,6 @@ namespace Tests;
 
 use ArrayIterator;
 use Illuminate\Foundation\Auth\User;
-use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
 use Laragear\Fingerprint\Enums\Format;
 use Laragear\Fingerprint\Fingerprint;
@@ -34,6 +33,28 @@ class FingerprintTest extends TestCase
         $fingerprint->use('sha256');
 
         static::assertSame('TZZ6MBEb8p8OugHESLN1wWKbL+0BzfzDrtkfG1fV3V4=', (string) $fingerprint);
+    }
+
+    public function test_use_with_options_changes_algorithm(): void
+    {
+        Fingerprint::$use = 'crc32c';
+
+        $fingerprint = Fingerprint::of('test');
+
+        $fingerprint->use('xxh3', ['seed' => 3]);
+
+        static::assertSame('l01vw7ZuFeA=', (string) $fingerprint);
+    }
+
+    public function test_use_only_options_does_not_changes_algorithm(): void
+    {
+        Fingerprint::$use = 'xxh3';
+
+        $fingerprint = Fingerprint::of('test');
+
+        $fingerprint->use(['seed' => 3]);
+
+        static::assertSame('l01vw7ZuFeA=', (string) $fingerprint);
     }
 
     public function test_as_changes_format(): void

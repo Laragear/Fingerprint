@@ -132,9 +132,13 @@ You may change it using the second parameter when creating a Fingerprint instanc
 ```php
 use Laragear\Fingerprint\Fingerprint;
 
+// When instancing the object...
 $fingerprint = Fingerprint::of($value, 'xxh128', [
     'seed' => 33
 ]);
+
+// ...or afterwards.
+$fingerprint->use('xxh128', ['seed' => 33]);
 ```
 
 You may also change the default algorithm for the Fingerprint instances through the `$use` static property.

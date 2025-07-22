@@ -55,11 +55,17 @@ class Fingerprint implements Stringable
     /**
      * Sets the algorithm to create the Fingerprint hash.
      *
+     * @param  string|array<string, mixed>  $algorithm
+     * @param  array<string, mixed>  $options
      * @return $this
      */
-    public function use(string $algorithm): static
+    public function use(string|array $algorithm, array $options = []): static
     {
-        $this->algorithm = $algorithm;
+        if (is_array($algorithm)) {
+            [$algorithm, $options] = [$this->algorithm, $algorithm];
+        }
+
+        [$this->algorithm, $this->options] = [$algorithm, $options];
 
         return $this;
     }
@@ -194,7 +200,7 @@ class Fingerprint implements Stringable
      */
     public function __toString(): string
     {
-        return match($this->format) {
+        return match ($this->format) {
             Format::AsHex => $this->hex(),
             Format::AsBase64 => $this->base64(),
             Format::AsBase64UrlSafe => $this->base64Url(),
