@@ -63,13 +63,15 @@ class FingerprintTest extends TestCase
 
     public function test_caches_fingerprint_hash(): void
     {
-        $fluent = new Fluent(['text' => 'test']);
+        $object = (object) ['text' => 'test'];
 
-        $fingerprint = Fingerprint::of($fluent);
+        $fingerprint = new Fingerprint(
+            $object, Fingerprint::$use, [], Fingerprint::$as, Str::fromBase64('lu+aV3cITnY=')
+        );
 
         static::assertSame('lu+aV3cITnY=', $fingerprint->hash());
 
-        $fluent->set('text', 'another-test');
+        $object->text = 'another-test';
 
         static::assertSame('lu+aV3cITnY=', $fingerprint->hash());
     }
