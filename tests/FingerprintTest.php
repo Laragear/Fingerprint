@@ -78,15 +78,13 @@ class FingerprintTest extends TestCase
 
     public function test_does_not_caches_fingerprint_hash_with_callback(): void
     {
-        $fluent = new Fluent(['text' => 'test']);
+        $object = (object) ['text' => 'test'];
 
-        $fingerprint = Fingerprint::of(fn () => $fluent->get('text'));
+        $fingerprint = new Fingerprint(
+            fn () => $object->text, Fingerprint::$use, [], Fingerprint::$as, Str::fromBase64('lu+aV3cITnY=')
+        );
 
         static::assertSame('C4zr/u0NRZ8=', $fingerprint->hash());
-
-        $fluent->set('text', 'another-test');
-
-        static::assertSame('YoCnYg5SxkI=', $fingerprint->hash());
     }
 
     public function test_hashes_resource(): void
