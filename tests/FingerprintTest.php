@@ -2,227 +2,208 @@
 
 namespace Tests;
 
-use ArrayIterator;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Foundation\Auth\User;
-use Illuminate\Support\Str;
-use Laragear\Fingerprint\Enums\Format;
-use Laragear\Fingerprint\Fingerprint;
-use PHPUnit\Framework\Attributes\DataProvider;
+use JsonSerializable;
+use Laragear\Fingerprint\Fingerprinter;
 use PHPUnit\Framework\TestCase;
+use Stringable;
+use function base64_encode;
+use function bin2hex;
+use function fclose;
+use function fopen;
+use function fwrite;
+use function hash;
+use function json_encode;
+use function rtrim;
 
 class FingerprintTest extends TestCase
 {
-    protected function setUp(): void
+    protected function tearDown(): void
     {
-        Fingerprint::$use = 'xxh3';
-        Fingerprint::$as = Format::AsBase64;
+        Fingerprinter::$algorithm = 'xxh3';
     }
 
-    public function test_defaults(): void
+    protected function fingerprinter(): Fingerprinter
     {
-        static::assertSame('xxh3', Fingerprint::$use);
-        static::assertSame(Format::AsBase64, Fingerprint::$as);
+        return new Fingerprinter;
     }
 
-    public function test_use_changes_algorithm(): void
+    public function test_makes_hash_using_xxh3_by_default(): void
     {
-        Fingerprint::$use = 'crc32c';
-
-        $fingerprint = Fingerprint::of('test');
-
-        $fingerprint->use('sha256');
-
-        static::assertSame('TZZ6MBEb8p8OugHESLN1wWKbL+0BzfzDrtkfG1fV3V4=', (string) $fingerprint);
+        $this->assertSame(hash('xxh3', 'test', true), $this->fingerprinter()->binary('test'));
     }
 
-    public function test_use_with_options_changes_algorithm(): void
+    public function test_makes_hash_using_config(): void
     {
-        Fingerprint::$use = 'crc32c';
+        Fingerprinter::$algorithm = 'sha256';
 
-        $fingerprint = Fingerprint::of('test');
-
-        $fingerprint->use('xxh3', ['seed' => 3]);
-
-        static::assertSame('l01vw7ZuFeA=', (string) $fingerprint);
+        $this->assertSame(hash('sha256', 'test', true), $this->fingerprinter()->binary('test'));
     }
 
-    public function test_use_only_options_does_not_changes_algorithm(): void
+    public function test_makes_hash_using_different_algorithm_at_runtime(): void
     {
-        Fingerprint::$use = 'xxh3';
-
-        $fingerprint = Fingerprint::of('test');
-
-        $fingerprint->use(['seed' => 3]);
-
-        static::assertSame('l01vw7ZuFeA=', (string) $fingerprint);
+        $this->assertSame(hash('sha256', 'test', true), $this->fingerprinter()->binary('test', 'sha256'));
     }
 
-    public function test_as_changes_format(): void
+    public function test_hashes_with_option(): void
     {
-        Fingerprint::$as = Format::AsRaw;
+        $hashable = 'test';
 
-        $fingerprint = Fingerprint::of('test');
+        $hash = hash('xxh3', $hashable, true, $options = [
+            'seed' => 'test-seed',
+        ]);
 
-        $fingerprint->as(Format::AsBase64UrlSafe);
-
-        static::assertSame('C4zr_u0NRZ8', (string) $fingerprint);
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable, options: $options));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable, options: $options));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable, options: $options));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable, options: $options));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable, options: $options));
     }
 
-    public function test_raw(): void
+    public function test_hashes_string(): void
     {
-        static::assertSame(Str::fromBase64('C4zr/u0NRZ8='), Fingerprint::of('test')->raw());
+        $hashable = 'test';
+
+        $hash = hash('xxh3', $hashable, true);
+
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable));
     }
 
-    public function test_hash(): void
+    public function test_hashes_stringable(): void
     {
-        static::assertSame('C4zr/u0NRZ8=', Fingerprint::of('test')->hash());
-    }
+        $hashable = new class implements Stringable
+        {
+            public function __toString(): string
+            {
+                return 'test';
+            }
+        };
 
-    public function test_base64(): void
-    {
-        static::assertSame('C4zr/u0NRZ8=', Fingerprint::of('test')->base64());
-    }
+        $hash = hash('xxh3', $hashable, true);
 
-    public function test_base64_url(): void
-    {
-        static::assertSame('C4zr_u0NRZ8', Fingerprint::of('test')->base64Url());
-    }
-
-    public function test_hex(): void
-    {
-        static::assertSame('0b8cebfeed0d459f', Fingerprint::of('test')->hex());
-    }
-
-    public function test_caches_fingerprint_hash(): void
-    {
-        $object = (object) ['text' => 'test'];
-
-        $fingerprint = new Fingerprint(
-            $object, Fingerprint::$use, [], Fingerprint::$as, Str::fromBase64('lu+aV3cITnY=')
-        );
-
-        static::assertSame('lu+aV3cITnY=', $fingerprint->hash());
-
-        $object->text = 'another-test';
-
-        static::assertSame('lu+aV3cITnY=', $fingerprint->hash());
-    }
-
-    public function test_does_not_caches_fingerprint_hash_with_callback(): void
-    {
-        $object = (object) ['text' => 'test'];
-
-        $fingerprint = new Fingerprint(
-            fn () => $object->text, Fingerprint::$use, [], Fingerprint::$as, Str::fromBase64('lu+aV3cITnY=')
-        );
-
-        static::assertSame('C4zr/u0NRZ8=', $fingerprint->hash());
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable));
     }
 
     public function test_hashes_resource(): void
     {
-        $resource = fopen(__DIR__ . '/fixtures/fingerprintable.txt', 'r');
+        $resource = fopen('php://memory', '+r');
 
-        $fingerprint = Fingerprint::of($resource);
+        fwrite($resource, 'test');
 
-        $this->assertSame('6Eq/UI1GMuc=', $fingerprint->hash());
+        $hash = hash('xxh3', json_encode('test'), true);
+
+        try {
+            $this->assertSame($hash, $this->fingerprinter()->binary($resource));
+            $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($resource));
+            $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($resource));
+            $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($resource));
+            $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($resource));
+        } finally {
+            fclose($resource);
+        }
     }
 
     public function test_hashes_iterable(): void
     {
-        $fingerprint = Fingerprint::of(new ArrayIterator(str_split('test')));
+        $hashable = ['test'];
 
-        $this->assertSame('TEO9OatCBX8=', $fingerprint->hash());
+        $hash = hash('xxh3', '"test"', true);
+
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable));
+    }
+
+    public function test_hashes_arrayable(): void
+    {
+        $hashable = new class implements Arrayable
+        {
+            public function toArray()
+            {
+                return ['test'];
+            }
+        };
+
+        $hash = hash('xxh3', '"test"', true);
+
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable));
+    }
+
+    public function test_hashes_jsonable(): void
+    {
+        $hashable = new class implements Jsonable
+        {
+            public function toJson($options = 0)
+            {
+                return '"test"';
+            }
+        };
+
+        $hash = hash('xxh3', '"test"', true);
+
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable));
+    }
+
+    public function test_hashes_json_serializable(): void
+    {
+        $hashable = new class implements JsonSerializable
+        {
+            public function jsonSerialize(): string
+            {
+                return 'test';
+            }
+        };
+
+        $hash = hash('xxh3', '"test"', true);
+
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable));
     }
 
     public function test_hashes_model(): void
     {
-        $fingerprint = Fingerprint::of((new User())->forceFill(['name' => 'test']));
+        $hashable = (new User)->forceFill(['name' => 'test']);
 
-        $this->assertSame('ANVzoYpsoh0=', $fingerprint->hash());
+        $hash = hash('xxh3', $hashable->toJson(), true);
+
+        $this->assertSame($hash, $this->fingerprinter()->binary($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->make($hashable));
+        $this->assertSame(base64_encode($hash), $this->fingerprinter()->base64($hashable));
+        $this->assertSame(rtrim(strtr($hash, ['+' => '-', '/' => '_']), '='), $this->fingerprinter()->base64Url($hashable));
+        $this->assertSame(bin2hex($hash), $this->fingerprinter()->hex($hashable));
     }
 
-    public function test_compares_an_equal_hash(): void
+    public function test_compares_hashes(): void
     {
-        $fingerprint = Fingerprint::of('test');
+        $expected = hash('xxh3', 'test', true);
 
-        $equal = $fingerprint->hash();
+        $this->assertTrue($this->fingerprinter()->is($expected, $expected));
+        $this->assertFalse($this->fingerprinter()->is($expected, 'different'));
 
-        static::assertTrue($fingerprint->is($equal));
-        static::assertFalse($fingerprint->isNot($equal));
-
-        static::assertTrue($fingerprint->is(Str::fromBase64($equal), false));
-        static::assertFalse($fingerprint->isNot(Str::fromBase64($equal), false));
-    }
-
-    public function test_compares_a_different_hash(): void
-    {
-        $fingerprint = Fingerprint::of('test');
-
-        $different = 'different';
-
-        static::assertFalse($fingerprint->is($different));
-        static::assertTrue($fingerprint->isNot($different));
-
-        static::assertFalse($fingerprint->is(Str::fromBase64($different), false));
-        static::assertTrue($fingerprint->isNot(Str::fromBase64($different), false));
-    }
-
-    public function test_compares_an_equal_fingerprint_instance(): void
-    {
-        $fingerprint = Fingerprint::of('test');
-
-        $equal = Fingerprint::of('test');
-
-        static::assertTrue($fingerprint->is($equal));
-        static::assertFalse($fingerprint->isNot($equal));
-
-        static::assertTrue($fingerprint->is(Str::fromBase64($equal), false));
-        static::assertFalse($fingerprint->isNot(Str::fromBase64($equal), false));
-    }
-
-    public function test_compares_a_different_fingerprint_instance(): void
-    {
-        $fingerprint = Fingerprint::of('test');
-
-        $different = Fingerprint::of('different');
-
-        static::assertFalse($fingerprint->is($different));
-        static::assertTrue($fingerprint->isNot($different));
-
-        static::assertFalse($fingerprint->is(Str::fromBase64($different), false));
-        static::assertTrue($fingerprint->isNot(Str::fromBase64($different), false));
-    }
-
-    public function test_of_uses_default_algorithm(): void
-    {
-        static::assertSame(Fingerprint::$use, Fingerprint::of('test')->uses());
-    }
-
-    public function test_of_uses_custom_algorithm(): void
-    {
-        static::assertSame('test-algo', Fingerprint::of('test', 'test-algo')->uses());
-    }
-
-    public function test_of_uses_options(): void
-    {
-        static::assertSame('l01vw7ZuFeA=', Fingerprint::of('test', options: ['seed' => 3])->hash());
-    }
-
-    public static function providesFormatToSerialize(): array
-    {
-        return [
-            [Format::AsRaw, Str::fromBase64('3OMlCLsjizg=')],
-            [Format::AsBase64, '3OMlCLsjizg='],
-            [Format::AsBase64UrlSafe, '3OMlCLsjizg'],
-            [Format::AsHex, 'dce32508bb238b38'],
-        ];
-    }
-
-    #[DataProvider('providesFormatToSerialize')]
-    public function test_serializes_into_string(Format $format, string $result): void
-    {
-        static::assertSame($result, (string) Fingerprint::of('value')->as($format));
-        static::assertSame($result, Fingerprint::of('value')->as($format)->toString());
+        $this->assertFalse($this->fingerprinter()->isNot($expected, $expected));
+        $this->assertTrue($this->fingerprinter()->isNot($expected, 'different'));
     }
 }

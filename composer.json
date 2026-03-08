@@ -17,10 +17,11 @@
         "issues": "https://github.com/Laragear/Fingerprint/issues"
     },
     "require": {
-        "php": "^8.2"
+        "php": "^8.3"
     },
     "require-dev": {
-        "orchestra/testbench": "9.*|10.*"
+        "orchestra/testbench": "10.*|11.*",
+        "laragear/meta-testing": "^4.2"
     },
     "autoload": {
         "psr-4": {
@@ -43,6 +44,9 @@
         "laravel": {
             "providers": [
                 "Laragear\\Fingerprint\\FingerprintServiceProvider"
+            ],
+            "aliases": [
+                "Laragear\\Finterprint\\Facades\\Fingerprint"
             ]
         }
     },
